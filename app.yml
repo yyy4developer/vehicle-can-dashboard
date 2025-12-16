@@ -1,0 +1,1 @@
+command: ["uvicorn", "yao_demo_vehicle_app.backend.app:app", "--workers", "2"]
