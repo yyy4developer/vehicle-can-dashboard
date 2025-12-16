@@ -10,7 +10,9 @@ Databricks Connect テストスクリプト
 """
 
 import sys
+import yaml
 from pathlib import Path
+from typing import Dict, Optional
 
 # プロジェクトのルートをパスに追加
 project_root = Path(__file__).parent
@@ -21,6 +23,38 @@ from databricks.sdk.errors import NotFound
 from sqlalchemy import create_engine, text, event
 from sqlmodel import Session
 from yao_demo_vehicle_app.backend.config import conf
+
+
+def load_databricks_config() -> Dict[str, Optional[str]]:
+    """
+    databricks.yml から設定を読み込みます。
+    
+    Returns:
+        データベース設定の辞書 (instance_name, database_name)
+    """
+    databricks_yml = project_root / "databricks.yml"
+    if not databricks_yml.exists():
+        return {}
+    
+    try:
+        with open(databricks_yml, "r", encoding="utf-8") as f:
+            config = yaml.safe_load(f)
+        
+        # databricks.yml の構造から設定を抽出
+        apps = config.get("resources", {}).get("apps", {})
+        for app_key, app_config in apps.items():
+            resources = app_config.get("resources", [])
+            for resource in resources:
+                if resource.get("name") == "db":
+                    db_config = resource.get("database", {})
+                    return {
+                        "instance_name": db_config.get("instance_name"),
+                        "database_name": db_config.get("database_name"),
+                    }
+    except Exception as e:
+        print(f"⚠️  databricks.yml の読み込みに失敗: {str(e)}")
+    
+    return {}
 
 
 def test_workspace_client() -> tuple[bool, WorkspaceClient | None, str]:
@@ -46,6 +80,24 @@ def test_workspace_client() -> tuple[bool, WorkspaceClient | None, str]:
         return False, None, error_msg
 
 
+def list_database_instances(ws: WorkspaceClient) -> list[str]:
+    """
+    利用可能なデータベースインスタンスのリストを取得します。
+    
+    Args:
+        ws: WorkspaceClient インスタンス
+        
+    Returns:
+        インスタンス名のリスト
+    """
+    try:
+        instances = list(ws.database.list_database_instances())
+        return [instance.name for instance in instances if instance.name]
+    except Exception as e:
+        print(f"⚠️  インスタンス一覧の取得に失敗: {str(e)}")
+        return []
+
+
 def test_database_instance(ws: WorkspaceClient, instance_name: str) -> tuple[bool, str]:
     """
     データベースインスタンスの存在を確認します。
@@ -67,6 +119,18 @@ def test_database_instance(ws: WorkspaceClient, instance_name: str) -> tuple[boo
     except NotFound:
         error_msg = f"データベースインスタンス '{instance_name}' が見つかりません"
         print(f"❌ {error_msg}")
+        
+        # 利用可能なインスタンスをリストアップ
+        print(f"\n📋 利用可能なデータベースインスタンスを確認中...")
+        available_instances = list_database_instances(ws)
+        if available_instances:
+            print(f"   利用可能なインスタンス ({len(available_instances)}件):")
+            for inst_name in available_instances:
+                marker = " ← 設定値" if inst_name == instance_name else ""
+                print(f"     - {inst_name}{marker}")
+        else:
+            print(f"   ⚠️  利用可能なインスタンスが見つかりませんでした")
+        
         return False, error_msg
     except Exception as e:
         error_msg = f"インスタンス確認エラー: {str(e)}"
@@ -194,15 +258,46 @@ def main():
     print("Databricks Connect テストスクリプト")
     print("=" * 60)
     
+    # databricks.yml から設定を読み込む
+    databricks_config = load_databricks_config()
+    
+    # 設定の優先順位: databricks.yml > 環境変数/conf > デフォルト
+    try:
+        if hasattr(conf, 'db') and conf.db:
+            conf_instance_name: Optional[str] = conf.db.instance_name
+            conf_database_name: Optional[str] = conf.db.database_name
+            conf_port: int = conf.db.port
+        else:
+            conf_instance_name = None
+            conf_database_name = None
+            conf_port = 5432
+    except Exception:
+        conf_instance_name = None
+        conf_database_name = None
+        conf_port = 5432
+    
+    instance_name: Optional[str] = (
+        databricks_config.get("instance_name")
+        or conf_instance_name
+        or None
+    )
+    
+    database_name: str = (
+        databricks_config.get("database_name")
+        or conf_database_name
+        or "databricks_postgres"
+    )
+    
+    port: int = conf_port
+    
     # 設定を確認
-    if not conf.db.instance_name:
+    if not instance_name:
         print("❌ エラー: データベースインスタンス名が設定されていません")
         print("   databricks.yml または環境変数で設定してください")
+        print(f"\n📋 databricks.yml から読み込まれた設定:")
+        print(f"   instance_name: {databricks_config.get('instance_name', '未設定')}")
+        print(f"   database_name: {databricks_config.get('database_name', '未設定')}")
         sys.exit(1)
-    
-    instance_name = conf.db.instance_name
-    database_name = conf.db.database_name
-    port = conf.db.port
     
     print(f"\n📋 設定情報:")
     print(f"   インスタンス名: {instance_name}")

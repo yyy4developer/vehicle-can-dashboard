@@ -10,9 +10,15 @@ from .logger import logger
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info(f"Starting app with configuration:\n{conf.model_dump_json(indent=2)}")
-    rt.validate_db()
-    rt.initialize_models()
+    try:
+        logger.info(f"Starting app with configuration:\n{conf.model_dump_json(indent=2)}")
+        logger.info(f"Database config: instance_name={conf.db.instance_name}, database_name={conf.db.database_name}, port={conf.db.port}")
+        rt.validate_db()
+        rt.initialize_models()
+        logger.info("App started successfully")
+    except Exception as e:
+        logger.error(f"Failed to start app: {type(e).__name__}: {str(e)}", exc_info=True)
+        raise
     yield
 
 

@@ -4,7 +4,6 @@ from pathlib import Path
 from pydantic import Field, BaseModel
 from dotenv import load_dotenv
 from .._metadata import app_name, app_slug
-from pydantic.fields import _Unset
 
 # project root is the parent of the src folder
 project_root = Path(__file__).parent.parent.parent.parent
@@ -17,9 +16,9 @@ if env_file.exists():
 class DatabaseConfig(BaseModel):
     port: int = Field(description="The port of the database", default=5432)
     database_name: str = Field(
-        description="The name of the database", default="databricks_postgres"
+        description="The name of the database", default="yao-lakebase"
     )
-    instance_name: str = Field(description="The name of the database instance")
+    instance_name: str = Field(description="The name of the database instance", default="fe-shared-demo")
 
 
 class AppConfig(BaseSettings):
@@ -31,7 +30,7 @@ class AppConfig(BaseSettings):
     )
     app_name: str = Field(default=app_name)
     api_prefix: str = Field(default="/api")
-    db: DatabaseConfig = _Unset
+    db: DatabaseConfig = Field(default_factory=DatabaseConfig)
 
     @property
     def static_assets_path(self) -> Path:

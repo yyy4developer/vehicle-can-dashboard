@@ -70,8 +70,9 @@ class Runtime:
                 session.connection().execute(text("SELECT 1"))
                 session.close()
 
-        except Exception:
-            raise ConnectionError("Failed to connect to the database")
+        except Exception as e:
+            logger.error(f"Database connection failed: {type(e).__name__}: {str(e)}", exc_info=True)
+            raise ConnectionError(f"Failed to connect to the database: {str(e)}")
 
         logger.info(
             f"Database connection to instance {self.config.db.instance_name} validated successfully"
