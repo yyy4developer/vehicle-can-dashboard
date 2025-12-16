@@ -1,0 +1,22 @@
+{
+  "mcpServers": {
+    "shadcn": {
+      "command": "bun",
+      "args": ["x", "--bun", "shadcn@latest", "mcp"],
+      "env": {
+        "PATH": "/Users/yunyi.yao/.bun/bin:/Users/yunyi.yao/.local/bin:/usr/local/bin:/System/Cryptexes/App/usr/bin:/usr/bin:/bin:/usr/sbin:/sbin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin:/opt/homebrew/bin"
+      }
+    },
+    "apx": {
+      "command": "uv",
+      "args": ["run", "apx", "dev", "mcp"]
+    },
+    "playwright": {
+      "command": "bun",
+      "args": ["x", "--bun", "@playwright/mcp@latest"],
+      "env": {
+        "PATH": "/Users/yunyi.yao/.bun/bin:/Users/yunyi.yao/.local/bin:/usr/local/bin:/System/Cryptexes/App/usr/bin:/usr/bin:/bin:/usr/sbin:/sbin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin:/opt/homebrew/bin"
+      }
+    }
+  }
+}
