@@ -13,7 +13,7 @@
 # COMMAND ----------
 
 # ウィジェットでパラメータを受け取る
-dbutils.widgets.text("catalog", "yunyi_catalog", "Catalog Name")
+dbutils.widgets.text("catalog", "", "Catalog Name")
 dbutils.widgets.text("schema", "yao_demo_vehicle_app", "Schema Name")
 dbutils.widgets.dropdown("reset", "true", ["true", "false"], "Reset (drop all)")
 

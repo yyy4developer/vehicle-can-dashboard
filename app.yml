@@ -4,12 +4,12 @@ user_api_scopes:
   - "iam.access-control:read"
 env:
   - name: DATABRICKS_HOST
-    value: "https://e2-demo-field-eng.cloud.databricks.com"
+    value: "https://<your-workspace>.cloud.databricks.com"
   - name: YAO_DEMO_VEHICLE_APP_UNITY__CATALOG
-    value: yunyi_catalog
+    value: <your_catalog>
   - name: YAO_DEMO_VEHICLE_APP_UNITY__SCHEMA_NAME
     value: yao_demo_vehicle_app
   - name: YAO_DEMO_VEHICLE_APP_UNITY__WAREHOUSE_ID
-    value: "4b9b953939869799"
+    value: "<your_warehouse_id>"
   - name: VOLUME_PATH
-    value: "/Volumes/yunyi_catalog/yao_demo_vehicle_app/videos"
+    value: "/Volumes/<your_catalog>/yao_demo_vehicle_app/videos"

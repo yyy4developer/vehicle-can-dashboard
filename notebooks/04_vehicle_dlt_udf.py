@@ -27,11 +27,11 @@ import cantools
 # Get configuration from pipeline settings or widgets
 try:
     # Try to get from spark conf (DLT pipeline)
-    catalog = spark.conf.get("catalog", "yunyi_catalog")
+    catalog = spark.conf.get("catalog", "")
     schema = spark.conf.get("schema", "yao_demo_vehicle_app")
 except Exception:
     # Fallback to defaults
-    catalog = "yunyi_catalog"
+    catalog = ""
     schema = "yao_demo_vehicle_app"
 
 # Try to get from widgets if available (standalone notebook)

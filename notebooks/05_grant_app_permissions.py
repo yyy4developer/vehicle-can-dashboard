@@ -13,7 +13,7 @@
 # COMMAND ----------
 
 # Get parameters from job or use defaults
-dbutils.widgets.text("catalog", "yunyi_catalog", "Catalog Name")
+dbutils.widgets.text("catalog", "", "Catalog Name")
 dbutils.widgets.text("schema", "yao_demo_vehicle_app", "Schema Name")
 dbutils.widgets.text("app_name", "yao-demo-vehicle-app", "Databricks App Name")
 

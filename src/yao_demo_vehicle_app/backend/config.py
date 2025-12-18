@@ -16,13 +16,13 @@ if env_file.exists():
 class DatabaseConfig(BaseModel):
     port: int = Field(description="The port of the database", default=5432)
     database_name: str = Field(
-        description="The name of the database", default="yao-lakebase"
+        description="The name of the database", default=""
     )
-    instance_name: str = Field(description="The name of the database instance", default="fe-shared-demo")
+    instance_name: str = Field(description="The name of the database instance", default="")
 
 
 class UnityConfig(BaseModel):
-    catalog: str = Field(description="Unity Catalog name", default="yunyi_catalog")
+    catalog: str = Field(description="Unity Catalog name", default="")
     schema_name: str = Field(description="Schema name", default="yao_demo_vehicle_app")
     warehouse_id: str = Field(description="SQL Warehouse ID for statement execution", default="")
 

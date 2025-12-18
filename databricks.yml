@@ -8,7 +8,7 @@ variables:
   
   catalog:
     description: "Unity Catalog name"
-    default: "yunyi_catalog"
+    default: "<your_catalog>"
   
   schema:
     description: "Schema name"
@@ -37,8 +37,8 @@ resources:
       resources:
         - name: "db"
           database:
-            database_name: "yao-lakebase"
-            instance_name: "fe-shared-demo"
+            database_name: "<your_database_name>"
+            instance_name: "<your_instance_name>"
             permission: "CAN_CONNECT_AND_CREATE"
         - name: "wh"
           sql_warehouse:
@@ -54,7 +54,7 @@ resources:
         # Run: databricks bundle run grant-app-permissions
 
   # ============================================
-  # Jobs (using existing cluster: yao_for_ml)
+  # Jobs
   # ============================================
   jobs:
     # Full Pipeline: Run all notebooks 00-04 in sequence
@@ -225,16 +225,16 @@ targets:
     mode: development
     default: true
     workspace:
-      host: https://e2-demo-field-eng.cloud.databricks.com
+      host: https://<your-workspace>.cloud.databricks.com
       profile: DEFAULT
     variables:
-      cluster_id: "1113-054502-wg38em8i"  # yao_for_ml
-      warehouse_id: "4b9b953939869799"  # Shared Unity Catalog Serverless
+      cluster_id: "<your_cluster_id>"
+      warehouse_id: "<your_warehouse_id>"
 
   prod:
     mode: production
     workspace:
-      host: https://e2-demo-field-eng.cloud.databricks.com
+      host: https://<your-workspace>.cloud.databricks.com
       profile: DEFAULT
     variables:
       cluster_id: ""  # TODO: Set your cluster ID here

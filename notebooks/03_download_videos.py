@@ -15,7 +15,7 @@
 # COMMAND ----------
 
 # ウィジェットでパラメータを受け取る
-dbutils.widgets.text("catalog", "yunyi_catalog", "Catalog Name")
+dbutils.widgets.text("catalog", "", "Catalog Name")
 dbutils.widgets.text("schema", "yao_demo_vehicle_app", "Schema Name")
 dbutils.widgets.text("vehicle_id", "VH001", "Vehicle ID")
 
