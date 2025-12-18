@@ -22,6 +22,40 @@ import type {
 import * as axios from "axios";
 import type { AxiosError, AxiosRequestConfig, AxiosResponse } from "axios";
 
+/**
+ * Quality metric for a single CAN message
+ */
+export interface CANQualityMetric {
+  arb_id: number;
+  message_name: string;
+  channel?: string;
+  message_count?: number;
+  expected_count?: number;
+  missing_rate?: number;
+  period_ms?: number;
+}
+
+/**
+ * CAN communication quality metrics
+ */
+export interface CANQualityOut {
+  window_start: string;
+  window_end: string;
+  metrics: CANQualityMetric[];
+  /** Overall health score (0-1) */
+  overall_health?: number;
+}
+
+export type CameraType = (typeof CameraType)[keyof typeof CameraType];
+
+// eslint-disable-next-line @typescript-eslint/no-redeclare
+export const CameraType = {
+  front: "front",
+  rear: "rear",
+  left: "left",
+  right: "right",
+} as const;
+
 export type ComplexValueDisplay = string | null;
 
 export type ComplexValuePrimary = boolean | null;
@@ -40,6 +74,45 @@ export interface ComplexValue {
   value?: ComplexValueValue;
 }
 
+/**
+ * List of events
+ */
+export interface EventListOut {
+  events: EventOut[];
+  total: number;
+}
+
+export type EventOutSpeedKmh = number | null;
+
+export type EventOutAcceleration = number | null;
+
+export type EventOutSteeringAngle = number | null;
+
+export type EventOutBrakePressure = number | null;
+
+/**
+ * Output model for event data
+ */
+export interface EventOut {
+  id: string;
+  event_type: EventType;
+  timestamp: string;
+  speed_kmh?: EventOutSpeedKmh;
+  acceleration?: EventOutAcceleration;
+  steering_angle?: EventOutSteeringAngle;
+  brake_pressure?: EventOutBrakePressure;
+  vehicle_id: string;
+}
+
+export type EventType = (typeof EventType)[keyof typeof EventType];
+
+// eslint-disable-next-line @typescript-eslint/no-redeclare
+export const EventType = {
+  hard_brake: "hard_brake",
+  hard_acceleration: "hard_acceleration",
+  sharp_turn: "sharp_turn",
+} as const;
+
 export interface HTTPValidationError {
   detail?: ValidationError[];
 }
@@ -52,6 +125,50 @@ export interface Name {
   family_name?: NameFamilyName;
   given_name?: NameGivenName;
 }
+
+export type SignalDataOutSpeedKmh = number | null;
+
+export type SignalDataOutRpm = number | null;
+
+export type SignalDataOutThrottlePct = number | null;
+
+export type SignalDataOutBrakePressure = number | null;
+
+export type SignalDataOutBrakeActive = boolean | null;
+
+export type SignalDataOutSteeringAngle = number | null;
+
+/**
+ * Output model for signal data
+ */
+export interface SignalDataOut {
+  timestamp: string;
+  speed_kmh?: SignalDataOutSpeedKmh;
+  rpm?: SignalDataOutRpm;
+  throttle_pct?: SignalDataOutThrottlePct;
+  brake_pressure?: SignalDataOutBrakePressure;
+  brake_active?: SignalDataOutBrakeActive;
+  steering_angle?: SignalDataOutSteeringAngle;
+}
+
+/**
+ * Time series of signal data
+ */
+export interface SignalTimeSeriesOut {
+  signals: SignalDataOut[];
+  count: number;
+}
+
+export type TimeRange = (typeof TimeRange)[keyof typeof TimeRange];
+
+// eslint-disable-next-line @typescript-eslint/no-redeclare
+export const TimeRange = {
+  "10m": "10m",
+  "1h": "1h",
+  today: "today",
+  "24h": "24h",
+  "7d": "7d",
+} as const;
 
 export type UserActive = boolean | null;
 
@@ -107,9 +224,110 @@ export interface ValidationError {
   type: string;
 }
 
+/**
+ * Vehicle statistics summary
+ */
+export interface VehicleStatsOut {
+  vehicle_id: string;
+  date: string;
+  avg_speed_kmh?: number;
+  max_speed_kmh?: number;
+  avg_rpm?: number;
+  max_rpm?: number;
+  distance_km?: number;
+  total_events?: number;
+  hard_brake_count?: number;
+  hard_acceleration_count?: number;
+  sharp_turn_count?: number;
+  driving_duration_minutes?: number;
+}
+
+/**
+ * Summary stats for dashboard
+ */
+export interface VehicleStatsSummaryOut {
+  current_speed_kmh?: number;
+  current_rpm?: number;
+  current_throttle_pct?: number;
+  current_brake_pressure?: number;
+  current_steering_angle?: number;
+  avg_speed_kmh?: number;
+  max_speed_kmh?: number;
+  total_events?: number;
+  distance_km?: number;
+}
+
 export interface VersionOut {
   version: string;
 }
+
+/**
+ * List of video metadata
+ */
+export interface VideoListOut {
+  videos: VideoMetadataOut[];
+  total: number;
+}
+
+export type VideoMetadataOutFileSizeBytes = number | null;
+
+/**
+ * Video metadata
+ */
+export interface VideoMetadataOut {
+  video_id: string;
+  camera: CameraType;
+  vehicle_id: string;
+  start_time: string;
+  end_time: string;
+  file_path: string;
+  file_size_bytes?: VideoMetadataOutFileSizeBytes;
+}
+
+export type GetSignalsParams = {
+  time_range?: TimeRange;
+  vehicle_id?: string;
+};
+
+export type GetLatestSignalParams = {
+  vehicle_id?: string;
+};
+
+export type GetEventsParams = {
+  time_range?: TimeRange;
+  event_type?: EventType | null;
+  vehicle_id?: string;
+  /**
+   * @maximum 200
+   */
+  limit?: number;
+};
+
+export type GetStatsParams = {
+  time_range?: TimeRange;
+  vehicle_id?: string;
+};
+
+export type GetStatsSummaryParams = {
+  vehicle_id?: string;
+};
+
+export type GetQualityParams = {
+  vehicle_id?: string;
+};
+
+export type GetVideosParams = {
+  vehicle_id?: string;
+  camera?: CameraType | null;
+};
+
+export type StreamVideoParams = {
+  vehicle_id?: string;
+};
+
+export type GetVideoUrlParams = {
+  vehicle_id?: string;
+};
 
 /**
  * @summary Version
@@ -600,6 +818,2544 @@ export function useCurrentUserSuspense<
   queryKey: DataTag<QueryKey, TData, TError>;
 } {
   const queryOptions = getCurrentUserSuspenseQueryOptions(options);
+
+  const query = useSuspenseQuery(
+    queryOptions,
+    queryClient,
+  ) as UseSuspenseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  query.queryKey = queryOptions.queryKey;
+
+  return query;
+}
+
+/**
+ * Get signal time series data from DLT tables using Service Principal
+ * @summary Get Signals
+ */
+export const getSignals = (
+  params?: GetSignalsParams,
+  options?: AxiosRequestConfig,
+): Promise<AxiosResponse<SignalTimeSeriesOut>> => {
+  return axios.default.get(`/api/signals`, {
+    ...options,
+    params: { ...params, ...options?.params },
+  });
+};
+
+export const getGetSignalsQueryKey = (params?: GetSignalsParams) => {
+  return [`/api/signals`, ...(params ? [params] : [])] as const;
+};
+
+export const getGetSignalsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getSignals>>,
+  TError = AxiosError<HTTPValidationError>,
+>(
+  params?: GetSignalsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getSignals>>, TError, TData>
+    >;
+    axios?: AxiosRequestConfig;
+  },
+) => {
+  const { query: queryOptions, axios: axiosOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetSignalsQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getSignals>>> = ({
+    signal,
+  }) => getSignals(params, { signal, ...axiosOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getSignals>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetSignalsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getSignals>>
+>;
+export type GetSignalsQueryError = AxiosError<HTTPValidationError>;
+
+export function useGetSignals<
+  TData = Awaited<ReturnType<typeof getSignals>>,
+  TError = AxiosError<HTTPValidationError>,
+>(
+  params: undefined | GetSignalsParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getSignals>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getSignals>>,
+          TError,
+          Awaited<ReturnType<typeof getSignals>>
+        >,
+        "initialData"
+      >;
+    axios?: AxiosRequestConfig;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetSignals<
+  TData = Awaited<ReturnType<typeof getSignals>>,
+  TError = AxiosError<HTTPValidationError>,
+>(
+  params?: GetSignalsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getSignals>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getSignals>>,
+          TError,
+          Awaited<ReturnType<typeof getSignals>>
+        >,
+        "initialData"
+      >;
+    axios?: AxiosRequestConfig;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetSignals<
+  TData = Awaited<ReturnType<typeof getSignals>>,
+  TError = AxiosError<HTTPValidationError>,
+>(
+  params?: GetSignalsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getSignals>>, TError, TData>
+    >;
+    axios?: AxiosRequestConfig;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+/**
+ * @summary Get Signals
+ */
+
+export function useGetSignals<
+  TData = Awaited<ReturnType<typeof getSignals>>,
+  TError = AxiosError<HTTPValidationError>,
+>(
+  params?: GetSignalsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getSignals>>, TError, TData>
+    >;
+    axios?: AxiosRequestConfig;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getGetSignalsQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey;
+
+  return query;
+}
+
+export const getGetSignalsSuspenseQueryOptions = <
+  TData = Awaited<ReturnType<typeof getSignals>>,
+  TError = AxiosError<HTTPValidationError>,
+>(
+  params?: GetSignalsParams,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getSignals>>,
+        TError,
+        TData
+      >
+    >;
+    axios?: AxiosRequestConfig;
+  },
+) => {
+  const { query: queryOptions, axios: axiosOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetSignalsQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getSignals>>> = ({
+    signal,
+  }) => getSignals(params, { signal, ...axiosOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseSuspenseQueryOptions<
+    Awaited<ReturnType<typeof getSignals>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetSignalsSuspenseQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getSignals>>
+>;
+export type GetSignalsSuspenseQueryError = AxiosError<HTTPValidationError>;
+
+export function useGetSignalsSuspense<
+  TData = Awaited<ReturnType<typeof getSignals>>,
+  TError = AxiosError<HTTPValidationError>,
+>(
+  params: undefined | GetSignalsParams,
+  options: {
+    query: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getSignals>>,
+        TError,
+        TData
+      >
+    >;
+    axios?: AxiosRequestConfig;
+  },
+  queryClient?: QueryClient,
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetSignalsSuspense<
+  TData = Awaited<ReturnType<typeof getSignals>>,
+  TError = AxiosError<HTTPValidationError>,
+>(
+  params?: GetSignalsParams,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getSignals>>,
+        TError,
+        TData
+      >
+    >;
+    axios?: AxiosRequestConfig;
+  },
+  queryClient?: QueryClient,
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetSignalsSuspense<
+  TData = Awaited<ReturnType<typeof getSignals>>,
+  TError = AxiosError<HTTPValidationError>,
+>(
+  params?: GetSignalsParams,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getSignals>>,
+        TError,
+        TData
+      >
+    >;
+    axios?: AxiosRequestConfig;
+  },
+  queryClient?: QueryClient,
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+/**
+ * @summary Get Signals
+ */
+
+export function useGetSignalsSuspense<
+  TData = Awaited<ReturnType<typeof getSignals>>,
+  TError = AxiosError<HTTPValidationError>,
+>(
+  params?: GetSignalsParams,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getSignals>>,
+        TError,
+        TData
+      >
+    >;
+    axios?: AxiosRequestConfig;
+  },
+  queryClient?: QueryClient,
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getGetSignalsSuspenseQueryOptions(params, options);
+
+  const query = useSuspenseQuery(
+    queryOptions,
+    queryClient,
+  ) as UseSuspenseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  query.queryKey = queryOptions.queryKey;
+
+  return query;
+}
+
+/**
+ * Get the latest signal values using Service Principal
+ * @summary Get Latest Signal
+ */
+export const getLatestSignal = (
+  params?: GetLatestSignalParams,
+  options?: AxiosRequestConfig,
+): Promise<AxiosResponse<SignalDataOut>> => {
+  return axios.default.get(`/api/signals/latest`, {
+    ...options,
+    params: { ...params, ...options?.params },
+  });
+};
+
+export const getGetLatestSignalQueryKey = (params?: GetLatestSignalParams) => {
+  return [`/api/signals/latest`, ...(params ? [params] : [])] as const;
+};
+
+export const getGetLatestSignalQueryOptions = <
+  TData = Awaited<ReturnType<typeof getLatestSignal>>,
+  TError = AxiosError<HTTPValidationError>,
+>(
+  params?: GetLatestSignalParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getLatestSignal>>,
+        TError,
+        TData
+      >
+    >;
+    axios?: AxiosRequestConfig;
+  },
+) => {
+  const { query: queryOptions, axios: axiosOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetLatestSignalQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getLatestSignal>>> = ({
+    signal,
+  }) => getLatestSignal(params, { signal, ...axiosOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getLatestSignal>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetLatestSignalQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getLatestSignal>>
+>;
+export type GetLatestSignalQueryError = AxiosError<HTTPValidationError>;
+
+export function useGetLatestSignal<
+  TData = Awaited<ReturnType<typeof getLatestSignal>>,
+  TError = AxiosError<HTTPValidationError>,
+>(
+  params: undefined | GetLatestSignalParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getLatestSignal>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getLatestSignal>>,
+          TError,
+          Awaited<ReturnType<typeof getLatestSignal>>
+        >,
+        "initialData"
+      >;
+    axios?: AxiosRequestConfig;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetLatestSignal<
+  TData = Awaited<ReturnType<typeof getLatestSignal>>,
+  TError = AxiosError<HTTPValidationError>,
+>(
+  params?: GetLatestSignalParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getLatestSignal>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getLatestSignal>>,
+          TError,
+          Awaited<ReturnType<typeof getLatestSignal>>
+        >,
+        "initialData"
+      >;
+    axios?: AxiosRequestConfig;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetLatestSignal<
+  TData = Awaited<ReturnType<typeof getLatestSignal>>,
+  TError = AxiosError<HTTPValidationError>,
+>(
+  params?: GetLatestSignalParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getLatestSignal>>,
+        TError,
+        TData
+      >
+    >;
+    axios?: AxiosRequestConfig;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+/**
+ * @summary Get Latest Signal
+ */
+
+export function useGetLatestSignal<
+  TData = Awaited<ReturnType<typeof getLatestSignal>>,
+  TError = AxiosError<HTTPValidationError>,
+>(
+  params?: GetLatestSignalParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getLatestSignal>>,
+        TError,
+        TData
+      >
+    >;
+    axios?: AxiosRequestConfig;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getGetLatestSignalQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey;
+
+  return query;
+}
+
+export const getGetLatestSignalSuspenseQueryOptions = <
+  TData = Awaited<ReturnType<typeof getLatestSignal>>,
+  TError = AxiosError<HTTPValidationError>,
+>(
+  params?: GetLatestSignalParams,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getLatestSignal>>,
+        TError,
+        TData
+      >
+    >;
+    axios?: AxiosRequestConfig;
+  },
+) => {
+  const { query: queryOptions, axios: axiosOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetLatestSignalQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getLatestSignal>>> = ({
+    signal,
+  }) => getLatestSignal(params, { signal, ...axiosOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseSuspenseQueryOptions<
+    Awaited<ReturnType<typeof getLatestSignal>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetLatestSignalSuspenseQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getLatestSignal>>
+>;
+export type GetLatestSignalSuspenseQueryError = AxiosError<HTTPValidationError>;
+
+export function useGetLatestSignalSuspense<
+  TData = Awaited<ReturnType<typeof getLatestSignal>>,
+  TError = AxiosError<HTTPValidationError>,
+>(
+  params: undefined | GetLatestSignalParams,
+  options: {
+    query: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getLatestSignal>>,
+        TError,
+        TData
+      >
+    >;
+    axios?: AxiosRequestConfig;
+  },
+  queryClient?: QueryClient,
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetLatestSignalSuspense<
+  TData = Awaited<ReturnType<typeof getLatestSignal>>,
+  TError = AxiosError<HTTPValidationError>,
+>(
+  params?: GetLatestSignalParams,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getLatestSignal>>,
+        TError,
+        TData
+      >
+    >;
+    axios?: AxiosRequestConfig;
+  },
+  queryClient?: QueryClient,
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetLatestSignalSuspense<
+  TData = Awaited<ReturnType<typeof getLatestSignal>>,
+  TError = AxiosError<HTTPValidationError>,
+>(
+  params?: GetLatestSignalParams,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getLatestSignal>>,
+        TError,
+        TData
+      >
+    >;
+    axios?: AxiosRequestConfig;
+  },
+  queryClient?: QueryClient,
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+/**
+ * @summary Get Latest Signal
+ */
+
+export function useGetLatestSignalSuspense<
+  TData = Awaited<ReturnType<typeof getLatestSignal>>,
+  TError = AxiosError<HTTPValidationError>,
+>(
+  params?: GetLatestSignalParams,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getLatestSignal>>,
+        TError,
+        TData
+      >
+    >;
+    axios?: AxiosRequestConfig;
+  },
+  queryClient?: QueryClient,
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getGetLatestSignalSuspenseQueryOptions(params, options);
+
+  const query = useSuspenseQuery(
+    queryOptions,
+    queryClient,
+  ) as UseSuspenseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  query.queryKey = queryOptions.queryKey;
+
+  return query;
+}
+
+/**
+ * Get driving events from DLT tables using Service Principal
+ * @summary Get Events
+ */
+export const getEvents = (
+  params?: GetEventsParams,
+  options?: AxiosRequestConfig,
+): Promise<AxiosResponse<EventListOut>> => {
+  return axios.default.get(`/api/events`, {
+    ...options,
+    params: { ...params, ...options?.params },
+  });
+};
+
+export const getGetEventsQueryKey = (params?: GetEventsParams) => {
+  return [`/api/events`, ...(params ? [params] : [])] as const;
+};
+
+export const getGetEventsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getEvents>>,
+  TError = AxiosError<HTTPValidationError>,
+>(
+  params?: GetEventsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getEvents>>, TError, TData>
+    >;
+    axios?: AxiosRequestConfig;
+  },
+) => {
+  const { query: queryOptions, axios: axiosOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetEventsQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getEvents>>> = ({
+    signal,
+  }) => getEvents(params, { signal, ...axiosOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getEvents>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetEventsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getEvents>>
+>;
+export type GetEventsQueryError = AxiosError<HTTPValidationError>;
+
+export function useGetEvents<
+  TData = Awaited<ReturnType<typeof getEvents>>,
+  TError = AxiosError<HTTPValidationError>,
+>(
+  params: undefined | GetEventsParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getEvents>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getEvents>>,
+          TError,
+          Awaited<ReturnType<typeof getEvents>>
+        >,
+        "initialData"
+      >;
+    axios?: AxiosRequestConfig;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetEvents<
+  TData = Awaited<ReturnType<typeof getEvents>>,
+  TError = AxiosError<HTTPValidationError>,
+>(
+  params?: GetEventsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getEvents>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getEvents>>,
+          TError,
+          Awaited<ReturnType<typeof getEvents>>
+        >,
+        "initialData"
+      >;
+    axios?: AxiosRequestConfig;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetEvents<
+  TData = Awaited<ReturnType<typeof getEvents>>,
+  TError = AxiosError<HTTPValidationError>,
+>(
+  params?: GetEventsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getEvents>>, TError, TData>
+    >;
+    axios?: AxiosRequestConfig;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+/**
+ * @summary Get Events
+ */
+
+export function useGetEvents<
+  TData = Awaited<ReturnType<typeof getEvents>>,
+  TError = AxiosError<HTTPValidationError>,
+>(
+  params?: GetEventsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getEvents>>, TError, TData>
+    >;
+    axios?: AxiosRequestConfig;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getGetEventsQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey;
+
+  return query;
+}
+
+export const getGetEventsSuspenseQueryOptions = <
+  TData = Awaited<ReturnType<typeof getEvents>>,
+  TError = AxiosError<HTTPValidationError>,
+>(
+  params?: GetEventsParams,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getEvents>>,
+        TError,
+        TData
+      >
+    >;
+    axios?: AxiosRequestConfig;
+  },
+) => {
+  const { query: queryOptions, axios: axiosOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetEventsQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getEvents>>> = ({
+    signal,
+  }) => getEvents(params, { signal, ...axiosOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseSuspenseQueryOptions<
+    Awaited<ReturnType<typeof getEvents>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetEventsSuspenseQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getEvents>>
+>;
+export type GetEventsSuspenseQueryError = AxiosError<HTTPValidationError>;
+
+export function useGetEventsSuspense<
+  TData = Awaited<ReturnType<typeof getEvents>>,
+  TError = AxiosError<HTTPValidationError>,
+>(
+  params: undefined | GetEventsParams,
+  options: {
+    query: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getEvents>>,
+        TError,
+        TData
+      >
+    >;
+    axios?: AxiosRequestConfig;
+  },
+  queryClient?: QueryClient,
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetEventsSuspense<
+  TData = Awaited<ReturnType<typeof getEvents>>,
+  TError = AxiosError<HTTPValidationError>,
+>(
+  params?: GetEventsParams,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getEvents>>,
+        TError,
+        TData
+      >
+    >;
+    axios?: AxiosRequestConfig;
+  },
+  queryClient?: QueryClient,
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetEventsSuspense<
+  TData = Awaited<ReturnType<typeof getEvents>>,
+  TError = AxiosError<HTTPValidationError>,
+>(
+  params?: GetEventsParams,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getEvents>>,
+        TError,
+        TData
+      >
+    >;
+    axios?: AxiosRequestConfig;
+  },
+  queryClient?: QueryClient,
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+/**
+ * @summary Get Events
+ */
+
+export function useGetEventsSuspense<
+  TData = Awaited<ReturnType<typeof getEvents>>,
+  TError = AxiosError<HTTPValidationError>,
+>(
+  params?: GetEventsParams,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getEvents>>,
+        TError,
+        TData
+      >
+    >;
+    axios?: AxiosRequestConfig;
+  },
+  queryClient?: QueryClient,
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getGetEventsSuspenseQueryOptions(params, options);
+
+  const query = useSuspenseQuery(
+    queryOptions,
+    queryClient,
+  ) as UseSuspenseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  query.queryKey = queryOptions.queryKey;
+
+  return query;
+}
+
+/**
+ * Get vehicle statistics from DLT tables using Service Principal
+ * @summary Get Stats
+ */
+export const getStats = (
+  params?: GetStatsParams,
+  options?: AxiosRequestConfig,
+): Promise<AxiosResponse<VehicleStatsOut>> => {
+  return axios.default.get(`/api/stats`, {
+    ...options,
+    params: { ...params, ...options?.params },
+  });
+};
+
+export const getGetStatsQueryKey = (params?: GetStatsParams) => {
+  return [`/api/stats`, ...(params ? [params] : [])] as const;
+};
+
+export const getGetStatsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getStats>>,
+  TError = AxiosError<HTTPValidationError>,
+>(
+  params?: GetStatsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getStats>>, TError, TData>
+    >;
+    axios?: AxiosRequestConfig;
+  },
+) => {
+  const { query: queryOptions, axios: axiosOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetStatsQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getStats>>> = ({
+    signal,
+  }) => getStats(params, { signal, ...axiosOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getStats>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetStatsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getStats>>
+>;
+export type GetStatsQueryError = AxiosError<HTTPValidationError>;
+
+export function useGetStats<
+  TData = Awaited<ReturnType<typeof getStats>>,
+  TError = AxiosError<HTTPValidationError>,
+>(
+  params: undefined | GetStatsParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getStats>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getStats>>,
+          TError,
+          Awaited<ReturnType<typeof getStats>>
+        >,
+        "initialData"
+      >;
+    axios?: AxiosRequestConfig;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetStats<
+  TData = Awaited<ReturnType<typeof getStats>>,
+  TError = AxiosError<HTTPValidationError>,
+>(
+  params?: GetStatsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getStats>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getStats>>,
+          TError,
+          Awaited<ReturnType<typeof getStats>>
+        >,
+        "initialData"
+      >;
+    axios?: AxiosRequestConfig;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetStats<
+  TData = Awaited<ReturnType<typeof getStats>>,
+  TError = AxiosError<HTTPValidationError>,
+>(
+  params?: GetStatsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getStats>>, TError, TData>
+    >;
+    axios?: AxiosRequestConfig;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+/**
+ * @summary Get Stats
+ */
+
+export function useGetStats<
+  TData = Awaited<ReturnType<typeof getStats>>,
+  TError = AxiosError<HTTPValidationError>,
+>(
+  params?: GetStatsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getStats>>, TError, TData>
+    >;
+    axios?: AxiosRequestConfig;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getGetStatsQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey;
+
+  return query;
+}
+
+export const getGetStatsSuspenseQueryOptions = <
+  TData = Awaited<ReturnType<typeof getStats>>,
+  TError = AxiosError<HTTPValidationError>,
+>(
+  params?: GetStatsParams,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getStats>>,
+        TError,
+        TData
+      >
+    >;
+    axios?: AxiosRequestConfig;
+  },
+) => {
+  const { query: queryOptions, axios: axiosOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetStatsQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getStats>>> = ({
+    signal,
+  }) => getStats(params, { signal, ...axiosOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseSuspenseQueryOptions<
+    Awaited<ReturnType<typeof getStats>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetStatsSuspenseQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getStats>>
+>;
+export type GetStatsSuspenseQueryError = AxiosError<HTTPValidationError>;
+
+export function useGetStatsSuspense<
+  TData = Awaited<ReturnType<typeof getStats>>,
+  TError = AxiosError<HTTPValidationError>,
+>(
+  params: undefined | GetStatsParams,
+  options: {
+    query: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getStats>>,
+        TError,
+        TData
+      >
+    >;
+    axios?: AxiosRequestConfig;
+  },
+  queryClient?: QueryClient,
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetStatsSuspense<
+  TData = Awaited<ReturnType<typeof getStats>>,
+  TError = AxiosError<HTTPValidationError>,
+>(
+  params?: GetStatsParams,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getStats>>,
+        TError,
+        TData
+      >
+    >;
+    axios?: AxiosRequestConfig;
+  },
+  queryClient?: QueryClient,
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetStatsSuspense<
+  TData = Awaited<ReturnType<typeof getStats>>,
+  TError = AxiosError<HTTPValidationError>,
+>(
+  params?: GetStatsParams,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getStats>>,
+        TError,
+        TData
+      >
+    >;
+    axios?: AxiosRequestConfig;
+  },
+  queryClient?: QueryClient,
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+/**
+ * @summary Get Stats
+ */
+
+export function useGetStatsSuspense<
+  TData = Awaited<ReturnType<typeof getStats>>,
+  TError = AxiosError<HTTPValidationError>,
+>(
+  params?: GetStatsParams,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getStats>>,
+        TError,
+        TData
+      >
+    >;
+    axios?: AxiosRequestConfig;
+  },
+  queryClient?: QueryClient,
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getGetStatsSuspenseQueryOptions(params, options);
+
+  const query = useSuspenseQuery(
+    queryOptions,
+    queryClient,
+  ) as UseSuspenseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  query.queryKey = queryOptions.queryKey;
+
+  return query;
+}
+
+/**
+ * Get summary statistics for dashboard cards using Service Principal
+ * @summary Get Stats Summary
+ */
+export const getStatsSummary = (
+  params?: GetStatsSummaryParams,
+  options?: AxiosRequestConfig,
+): Promise<AxiosResponse<VehicleStatsSummaryOut>> => {
+  return axios.default.get(`/api/stats/summary`, {
+    ...options,
+    params: { ...params, ...options?.params },
+  });
+};
+
+export const getGetStatsSummaryQueryKey = (params?: GetStatsSummaryParams) => {
+  return [`/api/stats/summary`, ...(params ? [params] : [])] as const;
+};
+
+export const getGetStatsSummaryQueryOptions = <
+  TData = Awaited<ReturnType<typeof getStatsSummary>>,
+  TError = AxiosError<HTTPValidationError>,
+>(
+  params?: GetStatsSummaryParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getStatsSummary>>,
+        TError,
+        TData
+      >
+    >;
+    axios?: AxiosRequestConfig;
+  },
+) => {
+  const { query: queryOptions, axios: axiosOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetStatsSummaryQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getStatsSummary>>> = ({
+    signal,
+  }) => getStatsSummary(params, { signal, ...axiosOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getStatsSummary>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetStatsSummaryQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getStatsSummary>>
+>;
+export type GetStatsSummaryQueryError = AxiosError<HTTPValidationError>;
+
+export function useGetStatsSummary<
+  TData = Awaited<ReturnType<typeof getStatsSummary>>,
+  TError = AxiosError<HTTPValidationError>,
+>(
+  params: undefined | GetStatsSummaryParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getStatsSummary>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getStatsSummary>>,
+          TError,
+          Awaited<ReturnType<typeof getStatsSummary>>
+        >,
+        "initialData"
+      >;
+    axios?: AxiosRequestConfig;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetStatsSummary<
+  TData = Awaited<ReturnType<typeof getStatsSummary>>,
+  TError = AxiosError<HTTPValidationError>,
+>(
+  params?: GetStatsSummaryParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getStatsSummary>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getStatsSummary>>,
+          TError,
+          Awaited<ReturnType<typeof getStatsSummary>>
+        >,
+        "initialData"
+      >;
+    axios?: AxiosRequestConfig;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetStatsSummary<
+  TData = Awaited<ReturnType<typeof getStatsSummary>>,
+  TError = AxiosError<HTTPValidationError>,
+>(
+  params?: GetStatsSummaryParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getStatsSummary>>,
+        TError,
+        TData
+      >
+    >;
+    axios?: AxiosRequestConfig;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+/**
+ * @summary Get Stats Summary
+ */
+
+export function useGetStatsSummary<
+  TData = Awaited<ReturnType<typeof getStatsSummary>>,
+  TError = AxiosError<HTTPValidationError>,
+>(
+  params?: GetStatsSummaryParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getStatsSummary>>,
+        TError,
+        TData
+      >
+    >;
+    axios?: AxiosRequestConfig;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getGetStatsSummaryQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey;
+
+  return query;
+}
+
+export const getGetStatsSummarySuspenseQueryOptions = <
+  TData = Awaited<ReturnType<typeof getStatsSummary>>,
+  TError = AxiosError<HTTPValidationError>,
+>(
+  params?: GetStatsSummaryParams,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getStatsSummary>>,
+        TError,
+        TData
+      >
+    >;
+    axios?: AxiosRequestConfig;
+  },
+) => {
+  const { query: queryOptions, axios: axiosOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetStatsSummaryQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getStatsSummary>>> = ({
+    signal,
+  }) => getStatsSummary(params, { signal, ...axiosOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseSuspenseQueryOptions<
+    Awaited<ReturnType<typeof getStatsSummary>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetStatsSummarySuspenseQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getStatsSummary>>
+>;
+export type GetStatsSummarySuspenseQueryError = AxiosError<HTTPValidationError>;
+
+export function useGetStatsSummarySuspense<
+  TData = Awaited<ReturnType<typeof getStatsSummary>>,
+  TError = AxiosError<HTTPValidationError>,
+>(
+  params: undefined | GetStatsSummaryParams,
+  options: {
+    query: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getStatsSummary>>,
+        TError,
+        TData
+      >
+    >;
+    axios?: AxiosRequestConfig;
+  },
+  queryClient?: QueryClient,
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetStatsSummarySuspense<
+  TData = Awaited<ReturnType<typeof getStatsSummary>>,
+  TError = AxiosError<HTTPValidationError>,
+>(
+  params?: GetStatsSummaryParams,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getStatsSummary>>,
+        TError,
+        TData
+      >
+    >;
+    axios?: AxiosRequestConfig;
+  },
+  queryClient?: QueryClient,
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetStatsSummarySuspense<
+  TData = Awaited<ReturnType<typeof getStatsSummary>>,
+  TError = AxiosError<HTTPValidationError>,
+>(
+  params?: GetStatsSummaryParams,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getStatsSummary>>,
+        TError,
+        TData
+      >
+    >;
+    axios?: AxiosRequestConfig;
+  },
+  queryClient?: QueryClient,
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+/**
+ * @summary Get Stats Summary
+ */
+
+export function useGetStatsSummarySuspense<
+  TData = Awaited<ReturnType<typeof getStatsSummary>>,
+  TError = AxiosError<HTTPValidationError>,
+>(
+  params?: GetStatsSummaryParams,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getStatsSummary>>,
+        TError,
+        TData
+      >
+    >;
+    axios?: AxiosRequestConfig;
+  },
+  queryClient?: QueryClient,
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getGetStatsSummarySuspenseQueryOptions(params, options);
+
+  const query = useSuspenseQuery(
+    queryOptions,
+    queryClient,
+  ) as UseSuspenseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  query.queryKey = queryOptions.queryKey;
+
+  return query;
+}
+
+/**
+ * Get CAN communication quality metrics from DLT tables using Service Principal
+ * @summary Get Quality
+ */
+export const getQuality = (
+  params?: GetQualityParams,
+  options?: AxiosRequestConfig,
+): Promise<AxiosResponse<CANQualityOut>> => {
+  return axios.default.get(`/api/quality`, {
+    ...options,
+    params: { ...params, ...options?.params },
+  });
+};
+
+export const getGetQualityQueryKey = (params?: GetQualityParams) => {
+  return [`/api/quality`, ...(params ? [params] : [])] as const;
+};
+
+export const getGetQualityQueryOptions = <
+  TData = Awaited<ReturnType<typeof getQuality>>,
+  TError = AxiosError<HTTPValidationError>,
+>(
+  params?: GetQualityParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getQuality>>, TError, TData>
+    >;
+    axios?: AxiosRequestConfig;
+  },
+) => {
+  const { query: queryOptions, axios: axiosOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetQualityQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getQuality>>> = ({
+    signal,
+  }) => getQuality(params, { signal, ...axiosOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getQuality>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetQualityQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getQuality>>
+>;
+export type GetQualityQueryError = AxiosError<HTTPValidationError>;
+
+export function useGetQuality<
+  TData = Awaited<ReturnType<typeof getQuality>>,
+  TError = AxiosError<HTTPValidationError>,
+>(
+  params: undefined | GetQualityParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getQuality>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getQuality>>,
+          TError,
+          Awaited<ReturnType<typeof getQuality>>
+        >,
+        "initialData"
+      >;
+    axios?: AxiosRequestConfig;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetQuality<
+  TData = Awaited<ReturnType<typeof getQuality>>,
+  TError = AxiosError<HTTPValidationError>,
+>(
+  params?: GetQualityParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getQuality>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getQuality>>,
+          TError,
+          Awaited<ReturnType<typeof getQuality>>
+        >,
+        "initialData"
+      >;
+    axios?: AxiosRequestConfig;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetQuality<
+  TData = Awaited<ReturnType<typeof getQuality>>,
+  TError = AxiosError<HTTPValidationError>,
+>(
+  params?: GetQualityParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getQuality>>, TError, TData>
+    >;
+    axios?: AxiosRequestConfig;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+/**
+ * @summary Get Quality
+ */
+
+export function useGetQuality<
+  TData = Awaited<ReturnType<typeof getQuality>>,
+  TError = AxiosError<HTTPValidationError>,
+>(
+  params?: GetQualityParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getQuality>>, TError, TData>
+    >;
+    axios?: AxiosRequestConfig;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getGetQualityQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey;
+
+  return query;
+}
+
+export const getGetQualitySuspenseQueryOptions = <
+  TData = Awaited<ReturnType<typeof getQuality>>,
+  TError = AxiosError<HTTPValidationError>,
+>(
+  params?: GetQualityParams,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getQuality>>,
+        TError,
+        TData
+      >
+    >;
+    axios?: AxiosRequestConfig;
+  },
+) => {
+  const { query: queryOptions, axios: axiosOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetQualityQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getQuality>>> = ({
+    signal,
+  }) => getQuality(params, { signal, ...axiosOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseSuspenseQueryOptions<
+    Awaited<ReturnType<typeof getQuality>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetQualitySuspenseQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getQuality>>
+>;
+export type GetQualitySuspenseQueryError = AxiosError<HTTPValidationError>;
+
+export function useGetQualitySuspense<
+  TData = Awaited<ReturnType<typeof getQuality>>,
+  TError = AxiosError<HTTPValidationError>,
+>(
+  params: undefined | GetQualityParams,
+  options: {
+    query: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getQuality>>,
+        TError,
+        TData
+      >
+    >;
+    axios?: AxiosRequestConfig;
+  },
+  queryClient?: QueryClient,
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetQualitySuspense<
+  TData = Awaited<ReturnType<typeof getQuality>>,
+  TError = AxiosError<HTTPValidationError>,
+>(
+  params?: GetQualityParams,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getQuality>>,
+        TError,
+        TData
+      >
+    >;
+    axios?: AxiosRequestConfig;
+  },
+  queryClient?: QueryClient,
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetQualitySuspense<
+  TData = Awaited<ReturnType<typeof getQuality>>,
+  TError = AxiosError<HTTPValidationError>,
+>(
+  params?: GetQualityParams,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getQuality>>,
+        TError,
+        TData
+      >
+    >;
+    axios?: AxiosRequestConfig;
+  },
+  queryClient?: QueryClient,
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+/**
+ * @summary Get Quality
+ */
+
+export function useGetQualitySuspense<
+  TData = Awaited<ReturnType<typeof getQuality>>,
+  TError = AxiosError<HTTPValidationError>,
+>(
+  params?: GetQualityParams,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getQuality>>,
+        TError,
+        TData
+      >
+    >;
+    axios?: AxiosRequestConfig;
+  },
+  queryClient?: QueryClient,
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getGetQualitySuspenseQueryOptions(params, options);
+
+  const query = useSuspenseQuery(
+    queryOptions,
+    queryClient,
+  ) as UseSuspenseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  query.queryKey = queryOptions.queryKey;
+
+  return query;
+}
+
+/**
+ * Get list of available videos with metadata using Service Principal
+ * @summary Get Videos
+ */
+export const getVideos = (
+  params?: GetVideosParams,
+  options?: AxiosRequestConfig,
+): Promise<AxiosResponse<VideoListOut>> => {
+  return axios.default.get(`/api/videos`, {
+    ...options,
+    params: { ...params, ...options?.params },
+  });
+};
+
+export const getGetVideosQueryKey = (params?: GetVideosParams) => {
+  return [`/api/videos`, ...(params ? [params] : [])] as const;
+};
+
+export const getGetVideosQueryOptions = <
+  TData = Awaited<ReturnType<typeof getVideos>>,
+  TError = AxiosError<HTTPValidationError>,
+>(
+  params?: GetVideosParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getVideos>>, TError, TData>
+    >;
+    axios?: AxiosRequestConfig;
+  },
+) => {
+  const { query: queryOptions, axios: axiosOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetVideosQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getVideos>>> = ({
+    signal,
+  }) => getVideos(params, { signal, ...axiosOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getVideos>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetVideosQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getVideos>>
+>;
+export type GetVideosQueryError = AxiosError<HTTPValidationError>;
+
+export function useGetVideos<
+  TData = Awaited<ReturnType<typeof getVideos>>,
+  TError = AxiosError<HTTPValidationError>,
+>(
+  params: undefined | GetVideosParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getVideos>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getVideos>>,
+          TError,
+          Awaited<ReturnType<typeof getVideos>>
+        >,
+        "initialData"
+      >;
+    axios?: AxiosRequestConfig;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetVideos<
+  TData = Awaited<ReturnType<typeof getVideos>>,
+  TError = AxiosError<HTTPValidationError>,
+>(
+  params?: GetVideosParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getVideos>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getVideos>>,
+          TError,
+          Awaited<ReturnType<typeof getVideos>>
+        >,
+        "initialData"
+      >;
+    axios?: AxiosRequestConfig;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetVideos<
+  TData = Awaited<ReturnType<typeof getVideos>>,
+  TError = AxiosError<HTTPValidationError>,
+>(
+  params?: GetVideosParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getVideos>>, TError, TData>
+    >;
+    axios?: AxiosRequestConfig;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+/**
+ * @summary Get Videos
+ */
+
+export function useGetVideos<
+  TData = Awaited<ReturnType<typeof getVideos>>,
+  TError = AxiosError<HTTPValidationError>,
+>(
+  params?: GetVideosParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getVideos>>, TError, TData>
+    >;
+    axios?: AxiosRequestConfig;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getGetVideosQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey;
+
+  return query;
+}
+
+export const getGetVideosSuspenseQueryOptions = <
+  TData = Awaited<ReturnType<typeof getVideos>>,
+  TError = AxiosError<HTTPValidationError>,
+>(
+  params?: GetVideosParams,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getVideos>>,
+        TError,
+        TData
+      >
+    >;
+    axios?: AxiosRequestConfig;
+  },
+) => {
+  const { query: queryOptions, axios: axiosOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetVideosQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getVideos>>> = ({
+    signal,
+  }) => getVideos(params, { signal, ...axiosOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseSuspenseQueryOptions<
+    Awaited<ReturnType<typeof getVideos>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetVideosSuspenseQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getVideos>>
+>;
+export type GetVideosSuspenseQueryError = AxiosError<HTTPValidationError>;
+
+export function useGetVideosSuspense<
+  TData = Awaited<ReturnType<typeof getVideos>>,
+  TError = AxiosError<HTTPValidationError>,
+>(
+  params: undefined | GetVideosParams,
+  options: {
+    query: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getVideos>>,
+        TError,
+        TData
+      >
+    >;
+    axios?: AxiosRequestConfig;
+  },
+  queryClient?: QueryClient,
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetVideosSuspense<
+  TData = Awaited<ReturnType<typeof getVideos>>,
+  TError = AxiosError<HTTPValidationError>,
+>(
+  params?: GetVideosParams,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getVideos>>,
+        TError,
+        TData
+      >
+    >;
+    axios?: AxiosRequestConfig;
+  },
+  queryClient?: QueryClient,
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetVideosSuspense<
+  TData = Awaited<ReturnType<typeof getVideos>>,
+  TError = AxiosError<HTTPValidationError>,
+>(
+  params?: GetVideosParams,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getVideos>>,
+        TError,
+        TData
+      >
+    >;
+    axios?: AxiosRequestConfig;
+  },
+  queryClient?: QueryClient,
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+/**
+ * @summary Get Videos
+ */
+
+export function useGetVideosSuspense<
+  TData = Awaited<ReturnType<typeof getVideos>>,
+  TError = AxiosError<HTTPValidationError>,
+>(
+  params?: GetVideosParams,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getVideos>>,
+        TError,
+        TData
+      >
+    >;
+    axios?: AxiosRequestConfig;
+  },
+  queryClient?: QueryClient,
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getGetVideosSuspenseQueryOptions(params, options);
+
+  const query = useSuspenseQuery(
+    queryOptions,
+    queryClient,
+  ) as UseSuspenseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  query.queryKey = queryOptions.queryKey;
+
+  return query;
+}
+
+/**
+ * Stream video from local cache (downloaded from Databricks Volumes)
+ * @summary Stream Video
+ */
+export const streamVideo = (
+  camera: CameraType,
+  params?: StreamVideoParams,
+  options?: AxiosRequestConfig,
+): Promise<AxiosResponse<unknown>> => {
+  return axios.default.get(`/api/video/${camera}/stream`, {
+    ...options,
+    params: { ...params, ...options?.params },
+  });
+};
+
+export const getStreamVideoQueryKey = (
+  camera?: CameraType,
+  params?: StreamVideoParams,
+) => {
+  return [`/api/video/${camera}/stream`, ...(params ? [params] : [])] as const;
+};
+
+export const getStreamVideoQueryOptions = <
+  TData = Awaited<ReturnType<typeof streamVideo>>,
+  TError = AxiosError<HTTPValidationError>,
+>(
+  camera: CameraType,
+  params?: StreamVideoParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof streamVideo>>, TError, TData>
+    >;
+    axios?: AxiosRequestConfig;
+  },
+) => {
+  const { query: queryOptions, axios: axiosOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getStreamVideoQueryKey(camera, params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof streamVideo>>> = ({
+    signal,
+  }) => streamVideo(camera, params, { signal, ...axiosOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!camera,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof streamVideo>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type StreamVideoQueryResult = NonNullable<
+  Awaited<ReturnType<typeof streamVideo>>
+>;
+export type StreamVideoQueryError = AxiosError<HTTPValidationError>;
+
+export function useStreamVideo<
+  TData = Awaited<ReturnType<typeof streamVideo>>,
+  TError = AxiosError<HTTPValidationError>,
+>(
+  camera: CameraType,
+  params: undefined | StreamVideoParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof streamVideo>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof streamVideo>>,
+          TError,
+          Awaited<ReturnType<typeof streamVideo>>
+        >,
+        "initialData"
+      >;
+    axios?: AxiosRequestConfig;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useStreamVideo<
+  TData = Awaited<ReturnType<typeof streamVideo>>,
+  TError = AxiosError<HTTPValidationError>,
+>(
+  camera: CameraType,
+  params?: StreamVideoParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof streamVideo>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof streamVideo>>,
+          TError,
+          Awaited<ReturnType<typeof streamVideo>>
+        >,
+        "initialData"
+      >;
+    axios?: AxiosRequestConfig;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useStreamVideo<
+  TData = Awaited<ReturnType<typeof streamVideo>>,
+  TError = AxiosError<HTTPValidationError>,
+>(
+  camera: CameraType,
+  params?: StreamVideoParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof streamVideo>>, TError, TData>
+    >;
+    axios?: AxiosRequestConfig;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+/**
+ * @summary Stream Video
+ */
+
+export function useStreamVideo<
+  TData = Awaited<ReturnType<typeof streamVideo>>,
+  TError = AxiosError<HTTPValidationError>,
+>(
+  camera: CameraType,
+  params?: StreamVideoParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof streamVideo>>, TError, TData>
+    >;
+    axios?: AxiosRequestConfig;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getStreamVideoQueryOptions(camera, params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey;
+
+  return query;
+}
+
+export const getStreamVideoSuspenseQueryOptions = <
+  TData = Awaited<ReturnType<typeof streamVideo>>,
+  TError = AxiosError<HTTPValidationError>,
+>(
+  camera: CameraType,
+  params?: StreamVideoParams,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof streamVideo>>,
+        TError,
+        TData
+      >
+    >;
+    axios?: AxiosRequestConfig;
+  },
+) => {
+  const { query: queryOptions, axios: axiosOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getStreamVideoQueryKey(camera, params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof streamVideo>>> = ({
+    signal,
+  }) => streamVideo(camera, params, { signal, ...axiosOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseSuspenseQueryOptions<
+    Awaited<ReturnType<typeof streamVideo>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type StreamVideoSuspenseQueryResult = NonNullable<
+  Awaited<ReturnType<typeof streamVideo>>
+>;
+export type StreamVideoSuspenseQueryError = AxiosError<HTTPValidationError>;
+
+export function useStreamVideoSuspense<
+  TData = Awaited<ReturnType<typeof streamVideo>>,
+  TError = AxiosError<HTTPValidationError>,
+>(
+  camera: CameraType,
+  params: undefined | StreamVideoParams,
+  options: {
+    query: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof streamVideo>>,
+        TError,
+        TData
+      >
+    >;
+    axios?: AxiosRequestConfig;
+  },
+  queryClient?: QueryClient,
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useStreamVideoSuspense<
+  TData = Awaited<ReturnType<typeof streamVideo>>,
+  TError = AxiosError<HTTPValidationError>,
+>(
+  camera: CameraType,
+  params?: StreamVideoParams,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof streamVideo>>,
+        TError,
+        TData
+      >
+    >;
+    axios?: AxiosRequestConfig;
+  },
+  queryClient?: QueryClient,
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useStreamVideoSuspense<
+  TData = Awaited<ReturnType<typeof streamVideo>>,
+  TError = AxiosError<HTTPValidationError>,
+>(
+  camera: CameraType,
+  params?: StreamVideoParams,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof streamVideo>>,
+        TError,
+        TData
+      >
+    >;
+    axios?: AxiosRequestConfig;
+  },
+  queryClient?: QueryClient,
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+/**
+ * @summary Stream Video
+ */
+
+export function useStreamVideoSuspense<
+  TData = Awaited<ReturnType<typeof streamVideo>>,
+  TError = AxiosError<HTTPValidationError>,
+>(
+  camera: CameraType,
+  params?: StreamVideoParams,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof streamVideo>>,
+        TError,
+        TData
+      >
+    >;
+    axios?: AxiosRequestConfig;
+  },
+  queryClient?: QueryClient,
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getStreamVideoSuspenseQueryOptions(
+    camera,
+    params,
+    options,
+  );
+
+  const query = useSuspenseQuery(
+    queryOptions,
+    queryClient,
+  ) as UseSuspenseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  query.queryKey = queryOptions.queryKey;
+
+  return query;
+}
+
+/**
+ * Get video streaming URL info
+ * @summary Get Video Url
+ */
+export const getVideoUrl = (
+  camera: CameraType,
+  params?: GetVideoUrlParams,
+  options?: AxiosRequestConfig,
+): Promise<AxiosResponse<unknown>> => {
+  return axios.default.get(`/api/video/${camera}/url`, {
+    ...options,
+    params: { ...params, ...options?.params },
+  });
+};
+
+export const getGetVideoUrlQueryKey = (
+  camera?: CameraType,
+  params?: GetVideoUrlParams,
+) => {
+  return [`/api/video/${camera}/url`, ...(params ? [params] : [])] as const;
+};
+
+export const getGetVideoUrlQueryOptions = <
+  TData = Awaited<ReturnType<typeof getVideoUrl>>,
+  TError = AxiosError<HTTPValidationError>,
+>(
+  camera: CameraType,
+  params?: GetVideoUrlParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getVideoUrl>>, TError, TData>
+    >;
+    axios?: AxiosRequestConfig;
+  },
+) => {
+  const { query: queryOptions, axios: axiosOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetVideoUrlQueryKey(camera, params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getVideoUrl>>> = ({
+    signal,
+  }) => getVideoUrl(camera, params, { signal, ...axiosOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!camera,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getVideoUrl>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetVideoUrlQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getVideoUrl>>
+>;
+export type GetVideoUrlQueryError = AxiosError<HTTPValidationError>;
+
+export function useGetVideoUrl<
+  TData = Awaited<ReturnType<typeof getVideoUrl>>,
+  TError = AxiosError<HTTPValidationError>,
+>(
+  camera: CameraType,
+  params: undefined | GetVideoUrlParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getVideoUrl>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getVideoUrl>>,
+          TError,
+          Awaited<ReturnType<typeof getVideoUrl>>
+        >,
+        "initialData"
+      >;
+    axios?: AxiosRequestConfig;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetVideoUrl<
+  TData = Awaited<ReturnType<typeof getVideoUrl>>,
+  TError = AxiosError<HTTPValidationError>,
+>(
+  camera: CameraType,
+  params?: GetVideoUrlParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getVideoUrl>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getVideoUrl>>,
+          TError,
+          Awaited<ReturnType<typeof getVideoUrl>>
+        >,
+        "initialData"
+      >;
+    axios?: AxiosRequestConfig;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetVideoUrl<
+  TData = Awaited<ReturnType<typeof getVideoUrl>>,
+  TError = AxiosError<HTTPValidationError>,
+>(
+  camera: CameraType,
+  params?: GetVideoUrlParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getVideoUrl>>, TError, TData>
+    >;
+    axios?: AxiosRequestConfig;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+/**
+ * @summary Get Video Url
+ */
+
+export function useGetVideoUrl<
+  TData = Awaited<ReturnType<typeof getVideoUrl>>,
+  TError = AxiosError<HTTPValidationError>,
+>(
+  camera: CameraType,
+  params?: GetVideoUrlParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getVideoUrl>>, TError, TData>
+    >;
+    axios?: AxiosRequestConfig;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getGetVideoUrlQueryOptions(camera, params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey;
+
+  return query;
+}
+
+export const getGetVideoUrlSuspenseQueryOptions = <
+  TData = Awaited<ReturnType<typeof getVideoUrl>>,
+  TError = AxiosError<HTTPValidationError>,
+>(
+  camera: CameraType,
+  params?: GetVideoUrlParams,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getVideoUrl>>,
+        TError,
+        TData
+      >
+    >;
+    axios?: AxiosRequestConfig;
+  },
+) => {
+  const { query: queryOptions, axios: axiosOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetVideoUrlQueryKey(camera, params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getVideoUrl>>> = ({
+    signal,
+  }) => getVideoUrl(camera, params, { signal, ...axiosOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseSuspenseQueryOptions<
+    Awaited<ReturnType<typeof getVideoUrl>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetVideoUrlSuspenseQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getVideoUrl>>
+>;
+export type GetVideoUrlSuspenseQueryError = AxiosError<HTTPValidationError>;
+
+export function useGetVideoUrlSuspense<
+  TData = Awaited<ReturnType<typeof getVideoUrl>>,
+  TError = AxiosError<HTTPValidationError>,
+>(
+  camera: CameraType,
+  params: undefined | GetVideoUrlParams,
+  options: {
+    query: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getVideoUrl>>,
+        TError,
+        TData
+      >
+    >;
+    axios?: AxiosRequestConfig;
+  },
+  queryClient?: QueryClient,
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetVideoUrlSuspense<
+  TData = Awaited<ReturnType<typeof getVideoUrl>>,
+  TError = AxiosError<HTTPValidationError>,
+>(
+  camera: CameraType,
+  params?: GetVideoUrlParams,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getVideoUrl>>,
+        TError,
+        TData
+      >
+    >;
+    axios?: AxiosRequestConfig;
+  },
+  queryClient?: QueryClient,
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetVideoUrlSuspense<
+  TData = Awaited<ReturnType<typeof getVideoUrl>>,
+  TError = AxiosError<HTTPValidationError>,
+>(
+  camera: CameraType,
+  params?: GetVideoUrlParams,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getVideoUrl>>,
+        TError,
+        TData
+      >
+    >;
+    axios?: AxiosRequestConfig;
+  },
+  queryClient?: QueryClient,
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+/**
+ * @summary Get Video Url
+ */
+
+export function useGetVideoUrlSuspense<
+  TData = Awaited<ReturnType<typeof getVideoUrl>>,
+  TError = AxiosError<HTTPValidationError>,
+>(
+  camera: CameraType,
+  params?: GetVideoUrlParams,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getVideoUrl>>,
+        TError,
+        TData
+      >
+    >;
+    axios?: AxiosRequestConfig;
+  },
+  queryClient?: QueryClient,
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getGetVideoUrlSuspenseQueryOptions(
+    camera,
+    params,
+    options,
+  );
 
   const query = useSuspenseQuery(
     queryOptions,

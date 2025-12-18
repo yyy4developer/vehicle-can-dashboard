@@ -1,9 +1,28 @@
 bundle:
   name: "yao-demo-vehicle-app"
 
+variables:
+  cluster_id:
+    description: "Databricks cluster ID for running notebooks"
+    default: ""
+  
+  catalog:
+    description: "Unity Catalog name"
+    default: "yunyi_catalog"
+  
+  schema:
+    description: "Schema name"
+    default: "yao_demo_vehicle_app"
+  
+  warehouse_id:
+    description: "SQL Warehouse ID for statement execution"
+    default: ""
+
 sync:
   include:
     - .build
+    - notebooks
+    - app.yml
 
 artifacts:
   default:
@@ -21,13 +40,185 @@ resources:
             database_name: "yao-lakebase"
             instance_name: "fe-shared-demo"
             permission: "CAN_CONNECT_AND_CREATE"
+        - name: "wh"
+          sql_warehouse:
+            id: ${var.warehouse_id}
+            permission: "CAN_USE"
+        - name: "videos_volume"
+          uc_securable:
+            securable_type: "VOLUME"
+            securable_full_name: "${var.catalog}.${var.schema}.videos"
+            permission: "READ_VOLUME"
+        # NOTE: Additional permissions (USE CATALOG, USE SCHEMA, SELECT on tables)
+        # are automatically granted by the 'grant-app-permissions' job.
+        # Run: databricks bundle run grant-app-permissions
 
-  # 使用已存在的数据库实例 fe-shared-demo，不需要创建新的
-  # database_instances:
-  #   yao-demo-vehicle-app-db:
-  #     name: "yao-demo-vehicle-app"
-  #     capacity: "CU_1"
+  # ============================================
+  # Jobs (using existing cluster: yao_for_ml)
+  # ============================================
+  jobs:
+    # Full Pipeline: Run all notebooks 00-04 in sequence
+    full-pipeline:
+      name: "[${bundle.target}] Full Pipeline (00-04)"
+      description: "Run complete pipeline: setup → data generation → DLT"
+      tasks:
+        - task_key: t00_setup
+          existing_cluster_id: ${var.cluster_id}
+          notebook_task:
+            notebook_path: ./notebooks/00_setup.py
+            base_parameters:
+              catalog: ${var.catalog}
+              schema: ${var.schema}
+              reset: "true"
+            source: WORKSPACE
 
+        - task_key: t01_generate_can_data
+          depends_on:
+            - task_key: t00_setup
+          existing_cluster_id: ${var.cluster_id}
+          notebook_task:
+            notebook_path: ./notebooks/01_data_generator.py
+            base_parameters:
+              catalog: ${var.catalog}
+              schema: ${var.schema}
+              vehicle_id: "VH001"
+              duration_seconds: "600"
+              scenario: "realistic"
+            source: WORKSPACE
+
+        - task_key: t02_generate_dbc
+          depends_on:
+            - task_key: t00_setup
+          existing_cluster_id: ${var.cluster_id}
+          notebook_task:
+            notebook_path: ./notebooks/02_generate_dbc.py
+            base_parameters:
+              catalog: ${var.catalog}
+              schema: ${var.schema}
+            source: WORKSPACE
+
+        - task_key: t03_download_videos
+          depends_on:
+            - task_key: t00_setup
+          existing_cluster_id: ${var.cluster_id}
+          notebook_task:
+            notebook_path: ./notebooks/03_download_videos.py
+            base_parameters:
+              catalog: ${var.catalog}
+              schema: ${var.schema}
+              vehicle_id: "VH001"
+            source: WORKSPACE
+
+        - task_key: t04_dlt_pipeline
+          depends_on:
+            - task_key: t01_generate_can_data
+            - task_key: t02_generate_dbc
+            - task_key: t03_download_videos
+          pipeline_task:
+            pipeline_id: ${resources.pipelines.vehicle-dlt-pipeline.id}
+            full_refresh: true
+
+        - task_key: t05_grant_app_permissions
+          depends_on:
+            - task_key: t04_dlt_pipeline
+          existing_cluster_id: ${var.cluster_id}
+          notebook_task:
+            notebook_path: ./notebooks/05_grant_app_permissions.py
+            base_parameters:
+              catalog: ${var.catalog}
+              schema: ${var.schema}
+              app_name: "yao-demo-vehicle-app"
+            source: WORKSPACE
+
+    # Grant App Permissions: Run after any deployment or data refresh
+    grant-app-permissions:
+      name: "[${bundle.target}] Grant App Permissions"
+      description: "Grant Unity Catalog permissions to the app's Service Principal"
+      tasks:
+        - task_key: grant_permissions
+          existing_cluster_id: ${var.cluster_id}
+          notebook_task:
+            notebook_path: ./notebooks/05_grant_app_permissions.py
+            base_parameters:
+              catalog: ${var.catalog}
+              schema: ${var.schema}
+              app_name: "yao-demo-vehicle-app"
+            source: WORKSPACE
+
+    # Setup: Reset and create schema/volumes
+    setup:
+      name: "[${bundle.target}] Setup (Reset & Create)"
+      description: "Drop and recreate schema and volumes"
+      tasks:
+        - task_key: setup
+          existing_cluster_id: ${var.cluster_id}
+          notebook_task:
+            notebook_path: ./notebooks/00_setup.py
+            base_parameters:
+              catalog: ${var.catalog}
+              schema: ${var.schema}
+              reset: "true"
+            source: WORKSPACE
+
+    # Data Generation: All data generation steps in one job
+    data-generation:
+      name: "[${bundle.target}] Data Generation"
+      description: "Generate CAN data, DBC file, and download videos"
+      tasks:
+        - task_key: generate_can_data
+          existing_cluster_id: ${var.cluster_id}
+          notebook_task:
+            notebook_path: ./notebooks/01_data_generator.py
+            base_parameters:
+              catalog: ${var.catalog}
+              schema: ${var.schema}
+              vehicle_id: "VH001"
+              duration_seconds: "600"
+              scenario: "realistic"
+            source: WORKSPACE
+
+        - task_key: generate_dbc
+          existing_cluster_id: ${var.cluster_id}
+          notebook_task:
+            notebook_path: ./notebooks/02_generate_dbc.py
+            base_parameters:
+              catalog: ${var.catalog}
+              schema: ${var.schema}
+            source: WORKSPACE
+
+        - task_key: download_videos
+          existing_cluster_id: ${var.cluster_id}
+          notebook_task:
+            notebook_path: ./notebooks/03_download_videos.py
+            base_parameters:
+              catalog: ${var.catalog}
+              schema: ${var.schema}
+              vehicle_id: "VH001"
+            source: WORKSPACE
+
+  # ============================================
+  # DLT Pipeline
+  # ============================================
+  pipelines:
+    vehicle-dlt-pipeline:
+      name: "[${bundle.target}] Vehicle CAN DLT Pipeline"
+      catalog: ${var.catalog}
+      schema: ${var.schema}
+      serverless: true
+      libraries:
+        # UDF definitions (must be loaded first)
+        - notebook:
+            path: ./notebooks/04_vehicle_dlt_udf.py
+        # SQL pipeline definitions
+        - file:
+            path: ./notebooks/04_vehicle_dlt_pipeline.sql
+      configuration:
+        catalog: ${var.catalog}
+        schema: ${var.schema}
+        raw_path: "/Volumes/${var.catalog}/${var.schema}/raw"
+      development: true
+      continuous: false
+      channel: PREVIEW
 
 targets:
   dev:
@@ -36,3 +227,15 @@ targets:
     workspace:
       host: https://e2-demo-field-eng.cloud.databricks.com
       profile: DEFAULT
+    variables:
+      cluster_id: "1113-054502-wg38em8i"  # yao_for_ml
+      warehouse_id: "4b9b953939869799"  # Shared Unity Catalog Serverless
+
+  prod:
+    mode: production
+    workspace:
+      host: https://e2-demo-field-eng.cloud.databricks.com
+      profile: DEFAULT
+    variables:
+      cluster_id: ""  # TODO: Set your cluster ID here
+      warehouse_id: ""  # TODO: Set your SQL Warehouse ID

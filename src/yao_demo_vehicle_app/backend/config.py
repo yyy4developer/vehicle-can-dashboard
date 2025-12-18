@@ -21,6 +21,12 @@ class DatabaseConfig(BaseModel):
     instance_name: str = Field(description="The name of the database instance", default="fe-shared-demo")
 
 
+class UnityConfig(BaseModel):
+    catalog: str = Field(description="Unity Catalog name", default="yunyi_catalog")
+    schema_name: str = Field(description="Schema name", default="yao_demo_vehicle_app")
+    warehouse_id: str = Field(description="SQL Warehouse ID for statement execution", default="")
+
+
 class AppConfig(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=env_file,
@@ -31,6 +37,7 @@ class AppConfig(BaseSettings):
     app_name: str = Field(default=app_name)
     api_prefix: str = Field(default="/api")
     db: DatabaseConfig = Field(default_factory=DatabaseConfig)
+    unity: UnityConfig = Field(default_factory=UnityConfig)
 
     @property
     def static_assets_path(self) -> Path:

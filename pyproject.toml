@@ -1,7 +1,7 @@
 [project]
 name = "yao-demo-vehicle-app"
 dynamic = ["version"]
-description = "Add your description here"
+description = "Vehicle CAN Data Dashboard - Real-time visualization and analysis of vehicle CAN bus data"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
